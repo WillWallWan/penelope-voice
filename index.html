@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Penelope">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✨</text></svg>">
@@ -175,7 +175,19 @@
   <div class="footer">Penelope Voice</div>
 
   <script type="module">
-    import { Conversation } from 'https://esm.sh/@elevenlabs/client@latest/browser';
+    let Conversation;
+    try {
+      const mod = await import('https://cdn.jsdelivr.net/npm/@elevenlabs/client@0.14.0/+esm');
+      Conversation = mod.Conversation;
+    } catch (e1) {
+      try {
+        const mod = await import('https://esm.sh/@elevenlabs/client@0.14.0/browser');
+        Conversation = mod.Conversation;
+      } catch (e2) {
+        console.error('Failed to load ElevenLabs SDK:', e1, e2);
+        document.getElementById('status').textContent = 'Failed to load — try refreshing';
+      }
+    }
 
     const AGENT_ID = 'agent_2401khm7anp3ejrt7xccsckqpnm8';
 
