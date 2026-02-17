@@ -18,6 +18,13 @@
       height: 100dvh;
       overflow: hidden;
     }
+    /* Try to force the widget to fill the screen */
+    elevenlabs-convai {
+      position: fixed !important;
+      inset: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+    }
   </style>
 </head>
 <body>
@@ -29,5 +36,18 @@
     expandable="always"
   ></elevenlabs-convai>
   <script src="https://elevenlabs.io/convai-widget/index.js" async type="text/javascript"></script>
+  <script>
+    // Try to auto-expand widget after load
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        const widget = document.querySelector('elevenlabs-convai');
+        if (widget && widget.shadowRoot) {
+          // Look for expand button inside shadow DOM and click it
+          const expandBtn = widget.shadowRoot.querySelector('[data-testid="expand-button"], button[aria-label*="expand"], button[aria-label*="Open"]');
+          if (expandBtn) expandBtn.click();
+        }
+      }, 2000);
+    });
+  </script>
 </body>
 </html>
