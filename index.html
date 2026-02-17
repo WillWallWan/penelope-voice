@@ -13,41 +13,276 @@
     body {
       background: #0a0a0a;
       color: #fff;
-      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       height: 100vh;
       height: 100dvh;
+      display: flex;
+      flex-direction: column;
       overflow: hidden;
     }
-    /* Try to force the widget to fill the screen */
-    elevenlabs-convai {
-      position: fixed !important;
-      inset: 0 !important;
-      width: 100% !important;
-      height: 100% !important;
+
+    /* Header */
+    .header {
+      padding: 20px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .header .logo { font-size: 32px; }
+    .header .name { font-size: 18px; font-weight: 300; letter-spacing: 2px; margin-top: 4px; }
+    .header .status {
+      font-size: 13px;
+      color: #666;
+      margin-top: 6px;
+      transition: color 0.3s;
+    }
+    .header .status.active { color: #d4a017; }
+
+    /* Transcript area */
+    .transcript {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 20px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .transcript::-webkit-scrollbar { width: 4px; }
+    .transcript::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+
+    .msg {
+      max-width: 85%;
+      padding: 10px 14px;
+      border-radius: 16px;
+      font-size: 15px;
+      line-height: 1.4;
+      animation: fadeIn 0.2s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    .msg.user {
+      align-self: flex-end;
+      background: #1a1a2e;
+      border-bottom-right-radius: 4px;
+      color: #ccc;
+    }
+    .msg.agent {
+      align-self: flex-start;
+      background: #1a1500;
+      border-bottom-left-radius: 4px;
+      color: #f0e6c8;
+    }
+    .msg .label {
+      font-size: 11px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      opacity: 0.5;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .empty-state {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #333;
+      font-size: 14px;
+    }
+
+    /* Controls */
+    .controls {
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      flex-shrink: 0;
+    }
+
+    .btn {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      font-size: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    .btn:active { transform: scale(0.92); }
+
+    .btn-call {
+      background: #d4a017;
+      color: #000;
+      box-shadow: 0 0 20px rgba(212, 160, 23, 0.3);
+    }
+    .btn-call:hover { background: #e6b422; }
+    .btn-call.active {
+      background: #e74c3c;
+      box-shadow: 0 0 20px rgba(231, 76, 60, 0.3);
+    }
+    .btn-call.active:hover { background: #c0392b; }
+
+    .btn-call.connecting {
+      background: #d4a017;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 20px rgba(212, 160, 23, 0.3); }
+      50% { box-shadow: 0 0 40px rgba(212, 160, 23, 0.6); }
+    }
+
+    .btn-mute {
+      width: 52px;
+      height: 52px;
+      background: #222;
+      color: #888;
+      font-size: 20px;
+      align-self: center;
+    }
+    .btn-mute:hover { background: #333; }
+    .btn-mute.muted { background: #e74c3c; color: #fff; }
+
+    .hidden { display: none !important; }
+
+    .footer {
+      text-align: center;
+      padding: 8px;
+      font-size: 11px;
+      color: #333;
+      flex-shrink: 0;
     }
   </style>
 </head>
 <body>
-  <elevenlabs-convai 
-    agent-id="agent_2401khm7anp3ejrt7xccsckqpnm8"
-    variant="full"
-    default-expanded="true"
-    always-expanded="true"
-    expandable="always"
-  ></elevenlabs-convai>
-  <script src="https://elevenlabs.io/convai-widget/index.js" async type="text/javascript"></script>
-  <script>
-    // Try to auto-expand widget after load
-    window.addEventListener('load', () => {
-      setTimeout(() => {
-        const widget = document.querySelector('elevenlabs-convai');
-        if (widget && widget.shadowRoot) {
-          // Look for expand button inside shadow DOM and click it
-          const expandBtn = widget.shadowRoot.querySelector('[data-testid="expand-button"], button[aria-label*="expand"], button[aria-label*="Open"]');
-          if (expandBtn) expandBtn.click();
-        }
-      }, 2000);
-    });
+  <div class="header">
+    <div class="logo">✨</div>
+    <div class="name">PENELOPE</div>
+    <div class="status" id="status">Tap to connect</div>
+  </div>
+
+  <div class="transcript" id="transcript">
+    <div class="empty-state" id="emptyState">Start a call to begin</div>
+  </div>
+
+  <div class="controls">
+    <button class="btn btn-mute hidden" id="muteBtn" onclick="toggleMute()">🎤</button>
+    <button class="btn btn-call" id="callBtn" onclick="toggleCall()">📞</button>
+  </div>
+
+  <div class="footer">Penelope Voice</div>
+
+  <script type="module">
+    import { Conversation } from 'https://esm.sh/@elevenlabs/client@latest/browser';
+
+    const AGENT_ID = 'agent_2401khm7anp3ejrt7xccsckqpnm8';
+
+    let conversation = null;
+    let isMuted = false;
+
+    const statusEl = document.getElementById('status');
+    const transcriptEl = document.getElementById('transcript');
+    const emptyState = document.getElementById('emptyState');
+    const callBtn = document.getElementById('callBtn');
+    const muteBtn = document.getElementById('muteBtn');
+
+    function addMessage(text, role) {
+      if (!text || !text.trim()) return;
+      emptyState.classList.add('hidden');
+      const div = document.createElement('div');
+      div.className = `msg ${role}`;
+      const label = document.createElement('div');
+      label.className = 'label';
+      label.textContent = role === 'agent' ? 'Penelope' : 'You';
+      const content = document.createElement('div');
+      content.textContent = text;
+      div.appendChild(label);
+      div.appendChild(content);
+      transcriptEl.appendChild(div);
+      transcriptEl.scrollTop = transcriptEl.scrollHeight;
+      return div;
+    }
+
+    let currentAgentMsg = null;
+
+    window.toggleCall = async function() {
+      if (conversation) {
+        await conversation.endSession();
+        conversation = null;
+        callBtn.classList.remove('active', 'connecting');
+        callBtn.textContent = '📞';
+        muteBtn.classList.add('hidden');
+        statusEl.textContent = 'Call ended';
+        statusEl.classList.remove('active');
+        return;
+      }
+
+      try {
+        callBtn.classList.add('connecting');
+        callBtn.textContent = '⏳';
+        statusEl.textContent = 'Connecting...';
+        statusEl.classList.add('active');
+
+        conversation = await Conversation.startSession({
+          agentId: AGENT_ID,
+          onConnect: () => {
+            callBtn.classList.remove('connecting');
+            callBtn.classList.add('active');
+            callBtn.textContent = '✕';
+            muteBtn.classList.remove('hidden');
+            statusEl.textContent = 'Connected';
+          },
+          onDisconnect: () => {
+            callBtn.classList.remove('active', 'connecting');
+            callBtn.textContent = '📞';
+            muteBtn.classList.add('hidden');
+            statusEl.textContent = 'Disconnected';
+            statusEl.classList.remove('active');
+            conversation = null;
+          },
+          onModeChange: (mode) => {
+            if (mode.mode === 'listening') {
+              statusEl.textContent = 'Listening...';
+              currentAgentMsg = null;
+            } else if (mode.mode === 'speaking') {
+              statusEl.textContent = 'Penelope is speaking...';
+            }
+          },
+          onMessage: (message) => {
+            if (message.source === 'user') {
+              addMessage(message.message, 'user');
+            } else if (message.source === 'ai') {
+              if (!currentAgentMsg) {
+                currentAgentMsg = addMessage(message.message, 'agent');
+              } else {
+                currentAgentMsg.querySelector('div:last-child').textContent = message.message;
+                transcriptEl.scrollTop = transcriptEl.scrollHeight;
+              }
+            }
+          },
+          onError: (error) => {
+            statusEl.textContent = 'Error: ' + (error.message || 'Something went wrong');
+            console.error('ElevenLabs error:', error);
+          },
+        });
+      } catch (err) {
+        callBtn.classList.remove('connecting');
+        callBtn.textContent = '📞';
+        statusEl.textContent = 'Failed to connect';
+        statusEl.classList.remove('active');
+        console.error('Failed to start:', err);
+      }
+    };
+
+    window.toggleMute = function() {
+      if (!conversation) return;
+      isMuted = !isMuted;
+      conversation.setVolume({ volume: isMuted ? 0 : 1 });
+      muteBtn.classList.toggle('muted', isMuted);
+      muteBtn.textContent = isMuted ? '🔇' : '🎤';
+    };
   </script>
 </body>
 </html>
