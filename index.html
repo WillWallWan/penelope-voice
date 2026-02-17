@@ -31,7 +31,7 @@
     .header .status { font-size: 13px; color: #555; margin-top: 6px; transition: color 0.3s; }
     .header .status.active { color: #d4a017; }
 
-    /* Orb */
+    /* Avatar Orb */
     .orb-container {
       display: flex;
       align-items: center;
@@ -40,63 +40,58 @@
       flex-shrink: 0;
     }
     .orb {
-      width: 120px;
-      height: 120px;
+      width: 140px;
+      height: 140px;
       border-radius: 50%;
       cursor: pointer;
       position: relative;
       transition: transform 0.2s;
-      background: radial-gradient(circle at 35% 35%, #f5d87a, #d4a017 40%, #8b6914 70%, #5a4510 100%);
-      box-shadow:
-        0 0 30px rgba(212, 160, 23, 0.3),
-        inset 0 -4px 12px rgba(0,0,0,0.3),
-        inset 0 4px 12px rgba(255,255,255,0.15);
+      background: url('avatar.png') center/cover no-repeat;
+      box-shadow: 0 0 25px rgba(212, 160, 23, 0.2), 0 0 0 3px rgba(212, 160, 23, 0.15);
       animation: orb-idle 4s ease-in-out infinite;
     }
     .orb:active { transform: scale(0.95); }
-    .orb::after {
+
+    /* Glow ring behind avatar */
+    .orb::before {
       content: '';
       position: absolute;
-      top: 15%;
-      left: 20%;
-      width: 30%;
-      height: 25%;
-      background: radial-gradient(ellipse, rgba(255,255,255,0.35), transparent);
+      inset: -6px;
       border-radius: 50%;
-      transform: rotate(-20deg);
+      background: conic-gradient(from 0deg, transparent, rgba(212, 160, 23, 0.3), transparent, rgba(212, 160, 23, 0.3), transparent);
+      z-index: -1;
+      opacity: 0;
+      transition: opacity 0.3s;
     }
 
     @keyframes orb-idle {
-      0%, 100% { box-shadow: 0 0 30px rgba(212, 160, 23, 0.3), inset 0 -4px 12px rgba(0,0,0,0.3), inset 0 4px 12px rgba(255,255,255,0.15); }
-      50% { box-shadow: 0 0 45px rgba(212, 160, 23, 0.4), inset 0 -4px 12px rgba(0,0,0,0.3), inset 0 4px 12px rgba(255,255,255,0.15); }
+      0%, 100% { box-shadow: 0 0 25px rgba(212, 160, 23, 0.2), 0 0 0 3px rgba(212, 160, 23, 0.15); }
+      50% { box-shadow: 0 0 35px rgba(212, 160, 23, 0.3), 0 0 0 3px rgba(212, 160, 23, 0.2); }
     }
 
-    .orb.connecting {
-      animation: orb-pulse 1.2s ease-in-out infinite;
+    /* Connecting: slow breathe + spinning ring */
+    .orb.connecting { animation: orb-connect 1.5s ease-in-out infinite; }
+    .orb.connecting::before { opacity: 1; animation: ring-spin 2s linear infinite; }
+    @keyframes orb-connect {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 30px rgba(212, 160, 23, 0.3), 0 0 0 3px rgba(212, 160, 23, 0.2); }
+      50% { transform: scale(1.04); box-shadow: 0 0 50px rgba(212, 160, 23, 0.5), 0 0 0 4px rgba(212, 160, 23, 0.3); }
     }
-    @keyframes orb-pulse {
-      0%, 100% { transform: scale(1); box-shadow: 0 0 30px rgba(212, 160, 23, 0.3), inset 0 -4px 12px rgba(0,0,0,0.3), inset 0 4px 12px rgba(255,255,255,0.15); }
-      50% { transform: scale(1.06); box-shadow: 0 0 60px rgba(212, 160, 23, 0.6), inset 0 -4px 12px rgba(0,0,0,0.3), inset 0 4px 12px rgba(255,255,255,0.15); }
-    }
+    @keyframes ring-spin { to { transform: rotate(360deg); } }
 
-    .orb.listening {
-      animation: orb-listen 2s ease-in-out infinite;
-    }
+    /* Listening: slow warm glow pulse — "I'm paying attention" */
+    .orb.listening { animation: orb-listen 2.5s ease-in-out infinite; }
+    .orb.listening::before { opacity: 1; animation: ring-spin 8s linear infinite; }
     @keyframes orb-listen {
-      0%, 100% { box-shadow: 0 0 40px rgba(212, 160, 23, 0.4), inset 0 -4px 12px rgba(0,0,0,0.3), inset 0 4px 12px rgba(255,255,255,0.15); }
-      50% { box-shadow: 0 0 60px rgba(212, 160, 23, 0.7), inset 0 -4px 12px rgba(0,0,0,0.3), inset 0 4px 12px rgba(255,255,255,0.15); }
+      0%, 100% { box-shadow: 0 0 30px rgba(212, 160, 23, 0.35), 0 0 0 3px rgba(212, 160, 23, 0.25); }
+      50% { box-shadow: 0 0 55px rgba(212, 160, 23, 0.6), 0 0 0 5px rgba(255, 215, 0, 0.35); }
     }
 
-    .orb.speaking {
-      animation: orb-speak 0.8s ease-in-out infinite;
-    }
+    /* Speaking: faster energetic pulse + bright glow — "I'm talking" */
+    .orb.speaking { animation: orb-speak 0.9s ease-in-out infinite; }
+    .orb.speaking::before { opacity: 1; animation: ring-spin 1.5s linear infinite; }
     @keyframes orb-speak {
-      0%, 100% { transform: scale(1); box-shadow: 0 0 50px rgba(255, 215, 0, 0.5), inset 0 -4px 12px rgba(0,0,0,0.3), inset 0 4px 12px rgba(255,255,255,0.15); }
-      50% { transform: scale(1.04); box-shadow: 0 0 80px rgba(255, 215, 0, 0.8), inset 0 -4px 12px rgba(0,0,0,0.3), inset 0 4px 12px rgba(255,255,255,0.15); }
-    }
-
-    .orb.active {
-      background: radial-gradient(circle at 35% 35%, #ffecb3, #ffd700 40%, #d4a017 70%, #8b6914 100%);
+      0%, 100% { transform: scale(1); box-shadow: 0 0 40px rgba(255, 215, 0, 0.5), 0 0 0 4px rgba(255, 215, 0, 0.35); }
+      50% { transform: scale(1.05); box-shadow: 0 0 75px rgba(255, 215, 0, 0.8), 0 0 0 6px rgba(255, 215, 0, 0.5); }
     }
 
     /* Transcript */
@@ -253,7 +248,7 @@
         conversation = await Conversation.startSession({
           agentId: AGENT_ID,
           onConnect: () => {
-            orb.className = 'orb active listening';
+            orb.className = 'orb listening';
             muteBtn.classList.add('visible');
             statusEl.textContent = 'Connected';
           },
@@ -266,11 +261,11 @@
           },
           onModeChange: (mode) => {
             if (mode.mode === 'listening') {
-              orb.className = 'orb active listening';
+              orb.className = 'orb listening';
               statusEl.textContent = 'Listening...';
               currentAgentMsg = null;
             } else if (mode.mode === 'speaking') {
-              orb.className = 'orb active speaking';
+              orb.className = 'orb speaking';
               statusEl.textContent = 'Speaking...';
             }
           },
