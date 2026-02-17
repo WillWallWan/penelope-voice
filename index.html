@@ -89,12 +89,15 @@
       transition: box-shadow 0.08s ease-out, transform 0.08s ease-out;
     }
 
-    /* Speaking: faster energetic pulse + bright glow — "I'm talking" */
-    .orb.speaking { animation: orb-speak 0.9s ease-in-out infinite; }
-    .orb.speaking::before { opacity: 1; animation: ring-spin 1.5s linear infinite; }
-    @keyframes orb-speak {
-      0%, 100% { transform: scale(1); box-shadow: 0 0 40px rgba(255, 215, 0, 0.5), 0 0 0 4px rgba(255, 215, 0, 0.35); }
-      50% { transform: scale(1.05); box-shadow: 0 0 75px rgba(255, 215, 0, 0.8), 0 0 0 6px rgba(255, 215, 0, 0.5); }
+    /* Speaking: glow driven by output audio volume via --speak-vol (0-1) */
+    .orb.speaking::before { opacity: 1; animation: ring-spin 2s linear infinite; }
+    .orb.speaking {
+      animation: none;
+      box-shadow:
+        0 0 calc(30px + 55px * var(--speak-vol, 0)) rgba(255, 215, 0, calc(0.3 + 0.55 * var(--speak-vol, 0))),
+        0 0 0 calc(3px + 6px * var(--speak-vol, 0)) rgba(255, 215, 0, calc(0.25 + 0.45 * var(--speak-vol, 0)));
+      transform: scale(calc(1 + 0.05 * var(--speak-vol, 0)));
+      transition: box-shadow 0.06s ease-out, transform 0.06s ease-out;
     }
 
     /* Transcript */
@@ -243,6 +246,62 @@
       orb.style.removeProperty('--vol');
     }
 
+    // Output audio monitor — watches for <audio> elements the SDK creates
+    let speakCtx = null;
+    let speakAnalyser = null;
+    let speakFrame = null;
+    let speakObserver = null;
+    let connectedAudios = new Set();
+
+    function startSpeakMonitor() {
+      speakCtx = new (window.AudioContext || window.webkitAudioContext)();
+      speakAnalyser = speakCtx.createAnalyser();
+      speakAnalyser.fftSize = 256;
+      speakAnalyser.smoothingTimeConstant = 0.4;
+      speakAnalyser.connect(speakCtx.destination);
+      const data = new Uint8Array(speakAnalyser.frequencyBinCount);
+
+      function connectAudio(el) {
+        if (connectedAudios.has(el)) return;
+        connectedAudios.add(el);
+        try {
+          const src = speakCtx.createMediaElementSource(el);
+          src.connect(speakAnalyser);
+        } catch(e) { /* already connected */ }
+      }
+
+      // Watch for audio elements the SDK injects
+      document.querySelectorAll('audio').forEach(connectAudio);
+      speakObserver = new MutationObserver(mutations => {
+        for (const m of mutations) {
+          for (const n of m.addedNodes) {
+            if (n.tagName === 'AUDIO') connectAudio(n);
+            if (n.querySelectorAll) n.querySelectorAll('audio').forEach(connectAudio);
+          }
+        }
+      });
+      speakObserver.observe(document.body, { childList: true, subtree: true });
+
+      function tick() {
+        speakAnalyser.getByteFrequencyData(data);
+        let sum = 0;
+        for (let i = 0; i < data.length; i++) sum += data[i] * data[i];
+        const vol = Math.min(Math.sqrt(sum / data.length) / 100, 1);
+        orb.style.setProperty('--speak-vol', vol.toFixed(3));
+        speakFrame = requestAnimationFrame(tick);
+      }
+      tick();
+    }
+
+    function stopSpeakMonitor() {
+      if (speakFrame) cancelAnimationFrame(speakFrame);
+      if (speakObserver) speakObserver.disconnect();
+      if (speakCtx) speakCtx.close();
+      speakCtx = null; speakAnalyser = null; speakFrame = null; speakObserver = null;
+      connectedAudios = new Set();
+      orb.style.removeProperty('--speak-vol');
+    }
+
     const statusEl = document.getElementById('status');
     const transcriptEl = document.getElementById('transcript');
     const emptyState = document.getElementById('emptyState');
@@ -273,6 +332,7 @@
         await conversation.endSession();
         conversation = null;
         stopMicMonitor();
+        stopSpeakMonitor();
         orb.className = 'orb';
         muteBtn.classList.remove('visible');
         statusEl.textContent = 'Call ended';
@@ -292,11 +352,13 @@
             muteBtn.classList.add('visible');
             statusEl.textContent = 'Connected';
             startMicMonitor();
+            startSpeakMonitor();
           },
           onDisconnect: () => {
             orb.className = 'orb';
             muteBtn.classList.remove('visible');
             stopMicMonitor();
+            stopSpeakMonitor();
             statusEl.textContent = 'Disconnected';
             statusEl.classList.remove('active');
             conversation = null;
