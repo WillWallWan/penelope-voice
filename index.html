@@ -135,11 +135,17 @@
       font-size: 14px;
     }
 
-    /* Mute button */
-    .mute-btn {
+    /* Bottom controls */
+    .controls {
       position: absolute;
       bottom: 20px;
       right: 20px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .ctrl-btn {
       width: 44px;
       height: 44px;
       border-radius: 50%;
@@ -153,9 +159,24 @@
       justify-content: center;
       transition: all 0.2s;
     }
-    .mute-btn:hover { background: #333; }
-    .mute-btn.visible { display: flex; }
-    .mute-btn.muted { background: #e74c3c; color: #fff; }
+    .ctrl-btn:hover { background: #333; }
+    .ctrl-btn.visible { display: flex; }
+    .ctrl-btn.muted { background: #e74c3c; color: #fff; }
+
+    /* Send/force-respond button */
+    .send-btn {
+      background: #1a3a1a;
+      color: #4CAF50;
+    }
+    .send-btn:hover { background: #2a4a2a; }
+    .send-btn.pulsing {
+      animation: send-pulse 0.3s ease;
+    }
+    @keyframes send-pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(0.9); background: #4CAF50; color: #fff; }
+      100% { transform: scale(1); }
+    }
 
     .footer {
       text-align: center;
@@ -181,7 +202,10 @@
     <div class="empty-state" id="emptyState">Start a call to begin</div>
   </div>
 
-  <button class="mute-btn" id="muteBtn" onclick="toggleMute()">🎤</button>
+  <div class="controls">
+    <button class="ctrl-btn send-btn" id="sendBtn" onclick="forceSend()" title="Force respond">➤</button>
+    <button class="ctrl-btn" id="muteBtn" onclick="toggleMute()">🎤</button>
+  </div>
 
   <div class="footer">Penelope Voice</div>
 
@@ -334,7 +358,7 @@
         stopMicMonitor();
         stopSpeakMonitor();
         orb.className = 'orb';
-        muteBtn.classList.remove('visible');
+        muteBtn.classList.remove('visible'); sendBtn.classList.remove('visible');
         statusEl.textContent = 'Call ended';
         statusEl.classList.remove('active');
         return;
@@ -350,13 +374,14 @@
           onConnect: () => {
             orb.className = 'orb listening';
             muteBtn.classList.add('visible');
+            sendBtn.classList.add('visible');
             statusEl.textContent = 'Connected';
             startMicMonitor();
             startSpeakMonitor();
           },
           onDisconnect: (reason) => {
             orb.className = 'orb';
-            muteBtn.classList.remove('visible');
+            muteBtn.classList.remove('visible'); sendBtn.classList.remove('visible');
             stopMicMonitor();
             stopSpeakMonitor();
             const reasonText = reason?.message || reason?.reason || (typeof reason === 'string' ? reason : '');
@@ -414,6 +439,23 @@
       conversation.setVolume({ volume: isMuted ? 0 : 1 });
       muteBtn.classList.toggle('muted', isMuted);
       muteBtn.textContent = isMuted ? '🔇' : '🎤';
+    };
+
+    // Force-send: mute mic briefly to trigger silence detection → agent responds
+    const sendBtn = document.getElementById('sendBtn');
+    window.forceSend = function() {
+      if (!conversation) return;
+      sendBtn.classList.add('pulsing');
+      setTimeout(() => sendBtn.classList.remove('pulsing'), 300);
+
+      // Mute mic to force end-of-turn
+      if (micStream) {
+        micStream.getAudioTracks().forEach(t => t.enabled = false);
+        // Re-enable after a beat so it's ready for next turn
+        setTimeout(() => {
+          if (micStream) micStream.getAudioTracks().forEach(t => t.enabled = true);
+        }, 1500);
+      }
     };
 
     } // end if Conversation loaded
